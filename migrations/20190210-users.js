@@ -20,6 +20,10 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false
       },
+      private_key: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
       sent: {
         type: Sequelize.FLOAT,
         allowNull: true

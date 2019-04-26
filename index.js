@@ -1,23 +1,18 @@
 "use strcit";
 
 const Discord = require("discord.js");
-const { SemuxApi, SemuxApiConfiguration } = require('semux-js');
+const { Network, TransactionType, Transaction, Key } = require('semux-js');
 const fs = require("fs");
-
+const Long = require('long');
+const rp = require('request-promise');
 const botSettings = require("./config/config-bot.json");
 const price = require('./getPrice.js');
 const prefix = botSettings.prefix;
 //update semux price every 15 min
 setInterval(price, 900000);
+const API = 'https://api.testnet.semux.online/v2.2.0/'
 
 const { Users } = require('./models'); 
-
-const sem = new SemuxApi(new SemuxApiConfiguration({
-	username: botSettings.username,
-	password: botSettings.password,
-	basePath: 'http://localhost:5171/v2.1.0'
-}));
-
 
 const bot = new Discord.Client({ disableEveryone: true });;
 
@@ -26,14 +21,34 @@ bot.on('ready', ()=>{
 });
 
 
+async function getAddress(address) {
+	const addressData = JSON.parse(await rp(API +'account?address='+ address));
+	return addressData;
+}
+
+async function sendToApi(tx) {
+	const serialize = Buffer.from(tx.toBytes().buffer).toString('hex')
+	try {
+		var { result } = await rp({
+			method: 'POST',
+			uri: `https://api.testnet.semux.online/v2.2.0/transaction/raw?raw=${serialize}&validateNonce=true`,
+			json: true,
+		});
+	} catch(e) {
+		console.log(e)
+	}
+	if(result) {
+		return result;
+	}
+}
+
 async function sendCoins(authorId, toAddress, value, msg) {
-	if(!toAddress || !value) return { error: true, reason: 'Amount of SEM and Discord Username or Semux Address are required.'}
+	if(!toAddress || !value) return { error: true, reason: 'Amount of SEM and Discord Username are required.'}
 	const from = await Users.findOne({ where: { discord_id: authorId }});
 	if(!from) return { error: true, reason: "You don't have account yet, type /getAddress first."};
-	console.log(value)
-	
+	var isFrom = await getAddress(from.address)
 	try {
-		var isValid = await sem.getAccount(toAddress);
+		var isValid = await getAddress(toAddress);
 	} catch(e) {
 		return { error: true, reason: 'Wrong recipient, try another one.'}; 
 	}
@@ -42,21 +57,34 @@ async function sendCoins(authorId, toAddress, value, msg) {
 	if(!amount) return { error: true, reason: 'Amount is not correct.'};
 	amount = amount*Math.pow(10,9);
 	// check reciever balance before transfer
-	const fromAddressBal = await sem.getAccount(from.address);
+	const fromAddressBal = await getAddress(from.address);
+	let nonce = Number(isFrom.result.nonce);
 	if(fromAddressBal.result.available < (amount + 0.005)) {
 		return { error: true, reason: `Insufficient balance, you have **${parseBal(fromAddressBal.result.available)} SEM**`};
 	} 
-
+	const private = Key.importEncodedPrivateKey(hexBytes(from.private_key));
 	try {
-		var txHash = await sem.transfer(from.address, toAddress, amount);
+		var tx = new Transaction(
+		  Network.TESTNET,
+		  TransactionType.TRANSFER,
+		  hexBytes(toAddress), // to
+		  Long.fromNumber(amount), // value
+		  Long.fromNumber(5000000), // fee
+		  Long.fromNumber(nonce), // nonce
+		  Long.fromNumber(new Date().getTime()), // timestamp
+		  "0x746970", // data
+		).sign(private);
 	} catch(e) {
 		console.log(e);
 	}
-	if(!txHash.success) {
+	let hash = await sendToApi(tx);
+	
+	if(!hash) {
 		return { error: true, reason: "Error while tried to create transaction."};
 	} else {
-		return { error: false, hash: txHash.result };
+		return { error: false, hash };
 	}
+	
 }
 
 
@@ -72,6 +100,7 @@ async function changeStats(senderId, recieverId, value) {
 		received: reciever.received + amount
 	})
 }
+
 
 bot.on('message', async msg => {
 	const args = msg.content.split(' ');
@@ -104,29 +133,37 @@ bot.on('message', async msg => {
 		if(username.includes('@')) {
 			var username_id = username.substring(2, username.length-1);
 		}
+
 		let userAddress = await Users.findOne({ where: { discord_id: username_id }});
 		if(!userAddress) return msg.channel.send('Wrong username, try another one');
 		userAddress = userAddress.address;
 		let reciever = bot.users.find('id', username_id);
 		if(!reciever) return msg.reply('Wrong username, try another one');
-		const result = await sendCoins(authorId, userAddress, amount, msg);
-		if(result.error) return msg.reply(result.reason);
+		try {
+			var trySend = await sendCoins(authorId, userAddress, amount, msg);
+		} catch(e) {
+			//console.log(e)
+		}
+		if(trySend.error) return msg.reply(trySend.reason);
 		await changeStats(authorId, username_id, amount);
-		reciever.send(`You've successfully tipped. TX: <https://semux.info/explorer/transaction/${result.hash}>`);
-		msg.reply(`Tip sent. TX: <https://semux.info/explorer/transaction/${result.hash}>`);
+		await reciever.send(`You've successfully tipped. TX: <https://semux.info/explorer/transaction/${trySend.hash}>`);
+		await msg.reply(`Tip sent. TX: <https://semux.info/explorer/transaction/${trySend.hash}>`);
 	}
 
 	// get donate address
 	if(msg.content.startsWith(`${prefix}getAddress`)) {
 		const user = await Users.findOne({ where: { discord_id: authorId }});
 		if(!user) {
-			const newAccount = await sem.createAccount();
-			if(newAccount.success) {
-				msg.author.send(`This is your unique deposit address: **${newAccount.result}**\nYou can deposit some SEM to this address and use your coins for tipping.\nPeople will be tipping to this address too. Try to be helpful to the community ;)`);
+			const key = Key.generateKeyPair();
+			const private_key = toHexString(key.getEncodedPrivateKey());
+			const address = '0x' + key.toAddressHexString();
+			if(address) {
+				msg.author.send(`This is your unique deposit address: **${address}**\nYou can deposit some SEM to this address and use your coins for tipping.\nPeople will be tipping to this address too. Try to be helpful to the community ;)`);
 				await Users.create({
+					username: msg.author.username,
 					discord_id: authorId,
-					address: newAccount.result,
-					username: msg.author.username
+					address,
+					private_key,
 				});
 			}
 		} else {
@@ -145,8 +182,8 @@ bot.on('message', async msg => {
 	if(msg.content.startsWith(`${prefix}balance`) || msg.content.startsWith(`${prefix}bal`)) {
 		const price = getJson();
 		const user = await Users.findOne({ where: { discord_id: authorId }});
-		if(!user) return msg.reply("Sorry, but you don't have account, type **/getAddress** first.")
-		const userBal = await sem.getAccount(user.address);
+		if(!user) return msg.reply("Sorry, but you don't have account, type **/getAddress** first.");
+		const userBal = JSON.parse(await rp(API +'account?address='+ user.address));
 		if(userBal.success) {
 			const availabeBal = numberFormat(parseBal(userBal.result.available));
 			const lockedBal = numberFormat(parseBal(userBal.result.locked));
@@ -167,13 +204,12 @@ bot.on('message', async msg => {
 		} else {
 			return msg.channel.send('Semux api issues');
 		}
-		
 	}
 
 	if(msg.content === `${prefix}stats`) {
 		const price = getJson();
 		try {
-			var { result } = await sem.getInfo();
+			var { result } = JSON.parse(await rp(API + 'info'));
 		} catch(e) {
 			return msg.channel.send("Lost semux connection");
 		}
@@ -206,6 +242,16 @@ function numberFormat(balance) {
 
 function parseBal(balance) {
 	return Number((Number(balance)/Math.pow(10,9)).toFixed(10));
+}
+
+function hexBytes(s) {
+  return Buffer.from(s.replace('0x', ''), 'hex')
+}
+
+function toHexString(byteArray) {
+  return Array.from(byteArray, function(byte) {
+    return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+  }).join('')
 }
 
 bot.login(botSettings.token);

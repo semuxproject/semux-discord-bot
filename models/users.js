@@ -19,6 +19,10 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.STRING,
       allowNull: false
     },
+    private_key: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
     sent: {
       type: DataTypes.FLOAT,
       allowNull: true
