@@ -7,7 +7,7 @@ const rp = require('request-promise')
 const botSettings = require('./config/config-bot.json')
 const getPrice = require('./getPrice.js')
 const prefix = botSettings.prefix
-const API = 'https://api.testnet.semux.online/v2.2.0/'
+const API = 'https://api.semux.online/v2.2.0/'
 
 const { Users } = require('./models')
 
