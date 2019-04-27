@@ -2,14 +2,11 @@
 
 const Discord = require('discord.js')
 const { Network, TransactionType, Transaction, Key } = require('semux-js')
-const fs = require('fs')
 const Long = require('long')
 const rp = require('request-promise')
 const botSettings = require('./config/config-bot.json')
-const price = require('./getPrice.js')
+const getPrice = require('./getPrice.js')
 const prefix = botSettings.prefix
-// update semux price every 15 min
-setInterval(price, 900000)
 const API = 'https://api.testnet.semux.online/v2.2.0/'
 
 const { Users } = require('./models')
@@ -176,7 +173,7 @@ bot.on('message', async msg => {
 
   // balance
   if (msg.content.startsWith(`${prefix}balance`) || msg.content.startsWith(`${prefix}bal`)) {
-    const price = getJson()
+    const price = getPrice()
     const user = await Users.findOne({ where: { discord_id: authorId } })
     if (!user) return msg.reply("Sorry, but you don't have account, type **/getAddress** first.")
     const userBal = JSON.parse(await rp(API + 'account?address=' + user.address))
@@ -203,14 +200,14 @@ bot.on('message', async msg => {
   }
 
   if (msg.content === `${prefix}stats`) {
-    const price = getJson()
+    const price = getPrice()
     try {
       var { result } = JSON.parse(await rp(API + 'info'))
     } catch (e) {
       return msg.channel.send('Lost semux connection')
     }
     if (result) {
-      return msg.channel.send(`Semux price: **${price.toFixed(3)} USD**\nSemux Last Block: **${result.latestBlockNumber}**\nPending Txs: **${result.pendingTransactions}**\nPeers: **${result.activePeers}**`)
+      return msg.channel.send(`Semux price: **${price} USD**\nSemux Last Block: **${result.latestBlockNumber}**\nPending Txs: **${result.pendingTransactions}**\nPeers: **${result.activePeers}**`)
     }
   }
 
@@ -226,10 +223,6 @@ bot.on('message', async msg => {
     )
   }
 })
-
-function getJson () {
-  return JSON.parse(fs.readFileSync('usdprice.txt'))
-}
 
 function numberFormat (balance) {
   const balanceInt = new Intl.NumberFormat('us-US').format(balance)
