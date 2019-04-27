@@ -3,7 +3,6 @@
     "dialect": "sqlite",
     "storage": "./database.sqlite3",
     "logging": false
-
   },
   "test": {
     "dialect": "sqlite",
