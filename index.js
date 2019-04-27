@@ -52,9 +52,10 @@ async function sendCoins (authorId, toAddress, value, msg) {
   let amount = Number(value)
   if (!amount) return { error: true, reason: 'Amount is not correct.' }
   amount = amount * Math.pow(10, 9)
+  if (amount < 0.000000001) return { error: true, reason: 'Wrong amount, try another one.' }
   // check reciever balance before transfer
   const fromAddressBal = await getAddress(from.address)
-  let nonce = Number(isFrom.result.nonce)
+  let nonce = parseInt(isFrom.result.nonce) + parseInt(isFrom.result.pendingTransactionCount)
   if (fromAddressBal.result.available < (amount + 0.005)) {
     return { error: true, reason: `Insufficient balance, you have **${parseBal(fromAddressBal.result.available)} SEM**` }
   }
@@ -128,9 +129,25 @@ bot.on('message', async msg => {
     }
 
     let userAddress = await Users.findOne({ where: { discord_id: usernameId } })
-    if (!userAddress) return msg.channel.send('Wrong username, try another one')
-    userAddress = userAddress.address
-    let reciever = bot.users.find('id', usernameId)
+    if (!userAddress) {
+      const key = Key.generateKeyPair()
+      const privateKey = toHexString(key.getEncodedPrivateKey())
+      const address = '0x' + key.toAddressHexString()
+      const newUserName = bot.users.find(user => user.id == usernameId)
+      if (!newUserName) {
+        return msg.reply('Cannt find this user on the server.')
+      }
+      var newRegister = await Users.create({
+        username: newUserName.username,
+        discord_id: usernameId,
+        address: address,
+        private_key: privateKey
+      })
+      userAddress = newRegister.address
+    } else {
+      userAddress = userAddress.address
+    }
+    let reciever = bot.users.find(user => user.id == usernameId)
     if (!reciever) return msg.reply('Wrong username, try another one')
     try {
       var trySend = await sendCoins(authorId, userAddress, amount, msg)
@@ -169,6 +186,7 @@ bot.on('message', async msg => {
     const amount = args[2]
     const toAddress = args[1]
     await sendCoins(authorId, toAddress, amount, msg)
+    msg.author.send('Your withdrawal requests has been processed successfully. Broadcasting transaction to the network now.')
   }
 
   // balance
