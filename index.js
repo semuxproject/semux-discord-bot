@@ -6,12 +6,13 @@ const Long = require('long')
 const rp = require('request-promise')
 const botSettings = require('./config/config-bot.json')
 const getPrice = require('./getPrice.js')
-const prefix = botSettings.prefix
-const API = 'https://api.semux.online/v2.1.0/'
-
 const { Users } = require('./models')
 
+const prefix = botSettings.prefix
 const bot = new Discord.Client({ disableEveryone: true })
+
+const API = 'https://api.semux.online/v2.1.0/'
+const FEE = 5000000
 
 bot.on('ready', () => {
   console.log('Bot is connected.')
@@ -65,11 +66,12 @@ async function sendCoins (authorId, toAddress, value, msg) {
   // check reciever balance before transfer
   const fromAddressBal = await getAddress(from.address)
   let nonce = parseInt(isFrom.result.nonce, 10) + parseInt(isFrom.result.pendingTransactionCount, 10)
-  if (fromAddressBal.result.available === amount) {
-    amount = amount - 0.005
+  const available = parseFloat(fromAddressBal.result.available)
+  if (available === amount) {
+    amount = amount - FEE
   }
-  if (fromAddressBal.result.available < (amount + 0.005)) {
-    return { error: true, reason: `Insufficient balance, you have **${parseBal(fromAddressBal.result.available)} SEM**` }
+  if (available < (amount + FEE)) {
+    return { error: true, reason: `Insufficient balance, you have **${parseBal(available)} SEM**` }
   }
   const privateKey = Key.importEncodedPrivateKey(hexBytes(from.private_key))
   try {
@@ -78,7 +80,7 @@ async function sendCoins (authorId, toAddress, value, msg) {
       TransactionType.TRANSFER,
       hexBytes(toAddress), // to
       Long.fromNumber(amount), // value
-      Long.fromNumber(5000000), // fee
+      Long.fromNumber(FEE), // fee
       Long.fromNumber(nonce), // nonce
       Long.fromNumber(new Date().getTime()), // timestamp
       '0x746970' // data
