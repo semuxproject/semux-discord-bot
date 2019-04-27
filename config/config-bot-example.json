@@ -1,6 +1,7 @@
 {
-	"username": "semux.api.username",
-	"password": "semux.api.password",
-	"secret": "discrod.bot.secret",
-	"token": "discrod.bot.token"
+  "username": "semux.api.username",
+  "password": "semux.api.password",
+  "secret": "discrod.bot.secret",
+  "token": "discrod.bot.token",
+  "prefix": "/"
 }

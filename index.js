@@ -112,7 +112,7 @@ bot.on('message', async msg => {
     return msg.channel.send(string)
   }
 
-  if (msg.content === `${prefix}topRecievers`) {
+  if (msg.content === `${prefix}topRecipients`) {
     let recievesList = await Users.findAll({ order: [['received', 'DESC']], where: { 'received': { $ne: null } }, limit: 10 })
     let string = 'Top-10 recipients:\n'
     let i = 1
@@ -158,8 +158,8 @@ bot.on('message', async msg => {
         await Users.create({
           username: msg.author.username,
           discord_id: authorId,
-          address,
-          privateKey
+          address: address,
+          private_key: privateKey
         })
       }
     } else {
@@ -216,13 +216,13 @@ bot.on('message', async msg => {
 
   if (msg.content === `${prefix}help`) {
     msg.channel.send(`SemuxBot commands:\n` +
-      `**${prefix}balance** *<address>* - show Semux balance on the following address.\n` +
-      `**${prefix}tip** *<@username>* *<amount>* -send SEM to Discord User.\n` +
+      `**${prefix}balance** - show your balance.\n` +
+      `**${prefix}tip** *<@username>* *<amount>* - send SEM to a Discord user.\n` +
       `**${prefix}withdraw** *<address>* *<amount>* - withdraw SEM to your personal address.\n` +
-      `**${prefix}getAddress**- get your personal Deposit Address.\n` +
-      `**${prefix}topDonators** - shows the most active donators.\n` +
-      `**${prefix}topRecievers** - shows the luckiest receivers.\n` +
-      `**${prefix}stats** - show current Semux Network Stats.`
+      `**${prefix}getAddress** - get your personal deposit/tips address.\n` +
+      `**${prefix}topDonators** - show the most active donators.\n` +
+      `**${prefix}topRecipients** - show the luckiest recipients.\n` +
+      `**${prefix}stats** - show current Semux network stats.`
     )
   }
 })
