@@ -65,6 +65,9 @@ async function sendCoins (authorId, toAddress, value, msg) {
   // check reciever balance before transfer
   const fromAddressBal = await getAddress(from.address)
   let nonce = parseInt(isFrom.result.nonce, 10) + parseInt(isFrom.result.pendingTransactionCount, 10)
+  if (fromAddressBal.result.available === amount) {
+    amount = amount - 0.005
+  }
   if (fromAddressBal.result.available < (amount + 0.005)) {
     return { error: true, reason: `Insufficient balance, you have **${parseBal(fromAddressBal.result.available)} SEM**` }
   }
