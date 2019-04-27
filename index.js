@@ -7,7 +7,7 @@ const rp = require('request-promise')
 const botSettings = require('./config/config-bot.json')
 const getPrice = require('./getPrice.js')
 const prefix = botSettings.prefix
-const API = 'https://api.semux.online/v2.2.0/'
+const API = 'https://api.semux.online/v2.1.0/'
 
 const { Users } = require('./models')
 
@@ -58,7 +58,7 @@ async function sendCoins (authorId, toAddress, value, msg) {
     return { error: true, reason: 'Wrong recipient, try another one.' }
   }
   if (value.includes(',')) value = value.replace(/,/g, '.')
-  let amount = Number(value)
+  let amount = parseFloat(value)
   if (!amount) return { error: true, reason: 'Amount is not correct.' }
   amount = amount * Math.pow(10, 9)
   if (amount < 0.000000001) return { error: true, reason: 'Wrong amount, try another one.' }
@@ -71,7 +71,7 @@ async function sendCoins (authorId, toAddress, value, msg) {
   const privateKey = Key.importEncodedPrivateKey(hexBytes(from.private_key))
   try {
     var tx = new Transaction(
-      Network.TESTNET,
+      Network.MAINNET,
       TransactionType.TRANSFER,
       hexBytes(toAddress), // to
       Long.fromNumber(amount), // value
@@ -94,7 +94,7 @@ async function sendCoins (authorId, toAddress, value, msg) {
 
 async function changeStats (senderId, recieverId, value) {
   if (value.includes(',')) value = value.replace(/,/g, '.')
-  let amount = Number(value)
+  let amount = parseFloat(value)
   let sender = await Users.findOne({ where: { discord_id: senderId } })
   let reciever = await Users.findOne({ where: { discord_id: recieverId } })
   await sender.update({
@@ -194,8 +194,17 @@ bot.on('message', async msg => {
   if (msg.content.startsWith(`${prefix}withdraw`)) {
     const amount = args[2]
     const toAddress = args[1]
-    await sendCoins(authorId, toAddress, amount, msg)
-    msg.author.send('Your withdrawal request has been processed successfully. Broadcasting transaction to the network now.')
+    let trySend
+    try {
+      trySend = await sendCoins(authorId, toAddress, amount, msg)
+    } catch (e) {
+      // console.log(e)
+    }
+    if (trySend.error) {
+      msg.author.send(trySend.reason)
+    } else {
+      msg.author.send('Your withdrawal request has been processed successfully. Broadcasting transaction to the network now.')
+    }
   }
 
   // balance
@@ -257,7 +266,7 @@ function numberFormat (balance) {
 }
 
 function parseBal (balance) {
-  return Number((Number(balance) / Math.pow(10, 9)).toFixed(10))
+  return parseFloat((parseFloat(balance) / Math.pow(10, 9)).toFixed(10))
 }
 
 function hexBytes (s) {
