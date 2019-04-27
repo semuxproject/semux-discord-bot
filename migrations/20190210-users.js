@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 
 module.exports = {
   up: (queryInterface, Sequelize) => {
@@ -14,7 +14,7 @@ module.exports = {
       },
       username: {
         type: Sequelize.STRING,
-        allowNull: false,
+        allowNull: false
       },
       address: {
         type: Sequelize.STRING,
@@ -32,11 +32,10 @@ module.exports = {
         type: Sequelize.FLOAT,
         allowNull: true
       }
-    });
+    })
   },
 
   down: (queryInterface, Sequelize) => {
-      return queryInterface.dropTable('users');
+    return queryInterface.dropTable('users')
   }
-};
-
+}
