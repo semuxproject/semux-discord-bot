@@ -177,7 +177,11 @@ bot.on('message', async msg => {
     }
     if (trySend.error) return msg.reply(trySend.reason)
     await changeStats(authorId, usernameId, amount)
-    await reciever.send(`You've received tips. TX: <https://semux.info/explorer/transaction/${trySend.hash}> \nSend me: \`/balance\` or \`/help\` to find more details`)
+    try {
+      await reciever.send(`You've received tips. TX: <https://semux.info/explorer/transaction/${trySend.hash}> \nSend me: \`/balance\` or \`/help\` to find more details`)
+    } catch(e) {
+      console.error(e)
+    }
     await msg.reply(`Tip sent. TX: <https://semux.info/explorer/transaction/${trySend.hash}>`)
   }
 
@@ -194,7 +198,7 @@ bot.on('message', async msg => {
         People will be tipping to this address too. Try to be helpful to the community ;)
         `
         try {
-          msg.author.send(text)
+          await msg.author.send(text)
         } catch (e) {
           console.error(e)
           msg.channel.send(text)
@@ -209,7 +213,7 @@ bot.on('message', async msg => {
     } else {
       let text = `Your deposit address is: **${user.address}**`
       try {
-        msg.author.send(text)
+        await msg.author.send(text)
       } catch (e) {
         console.error(e)
         msg.channel.send(text)
@@ -232,7 +236,7 @@ bot.on('message', async msg => {
       responseToWithdrawal = trySend.reason
     }
     try {
-      msg.author.send(responseToWithdrawal)
+      await msg.author.send(responseToWithdrawal)
     } catch (e) {
       console.error(e)
     }
