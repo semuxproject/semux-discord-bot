@@ -1,0 +1,10 @@
+{
+  "/balance": "true",
+  "/bal": "true",
+  "/tip": "true",
+  "/withdraw": "true",
+  "/getAddress": "true",
+  "/topDonators": "true",
+  "/topRecipients": "true",
+  "/stats": "true"
+}

@@ -5,6 +5,7 @@ const { Network, TransactionType, Transaction, Key } = require('semux-js')
 const Long = require('long')
 const rp = require('request-promise')
 const botSettings = require('./config/config-bot.json')
+const allowedCommands = require('./config/allowed-commands.json')
 const getPrice = require('./getPrice.js')
 const { Users } = require('./models')
 
@@ -111,8 +112,14 @@ async function changeStats (senderId, recieverId, value) {
 }
 
 bot.on('message', async msg => {
-  const args = msg.content.split(' ')
+  // replace double whitespaces with a single one
+  msg.content = msg.content.toString().replace(/  +/g, ' ')
+  const args = msg.content.trim().split(' ')
   const authorId = msg.author.id
+
+  if (allowedCommands[args[0]]) {
+    console.log(`[${new Date()}] ${msg.author.username}#${msg.author.discriminator}: ${msg.content}`)
+  }
 
   if (msg.content === `${prefix}topDonators`) {
     let donatorsList = await Users.findAll({ order: [['sent', 'DESC']], where: { 'sent': { $ne: null } }, limit: 10 })
@@ -182,7 +189,16 @@ bot.on('message', async msg => {
       const privateKey = toHexString(key.getEncodedPrivateKey())
       const address = '0x' + key.toAddressHexString()
       if (address) {
-        msg.author.send(`This is your unique deposit address: **${address}**\nYou can deposit some SEM to this address and use your coins for tipping.\nPeople will be tipping to this address too. Try to be helpful to the community ;)`)
+        let text = `This is your unique deposit address: **${address}**\n
+        You can deposit some SEM to this address and use your coins for tipping.\n
+        People will be tipping to this address too. Try to be helpful to the community ;)
+        `
+        try {
+          msg.author.send(text)
+        } catch (e) {
+          console.error(e)
+          msg.channel.send(text)
+        }
         await Users.create({
           username: msg.author.username,
           discord_id: authorId,
@@ -191,7 +207,13 @@ bot.on('message', async msg => {
         })
       }
     } else {
-      return msg.author.send(`Your deposit address is: **${user.address}**`)
+      let text = `Your deposit address is: **${user.address}**`
+      try {
+        msg.author.send(text)
+      } catch (e) {
+        console.error(e)
+        msg.channel.send(text)
+      }
     }
   }
 
@@ -205,10 +227,14 @@ bot.on('message', async msg => {
     } catch (e) {
       // console.log(e)
     }
+    let responseToWithdrawal = 'Your withdrawal request has been processed successfully.'
     if (trySend.error) {
-      msg.author.send(trySend.reason)
-    } else {
-      msg.author.send('Your withdrawal request has been processed successfully. Broadcasting transaction to the network now.')
+      responseToWithdrawal = trySend.reason
+    }
+    try {
+      msg.author.send(responseToWithdrawal)
+    } catch (e) {
+      console.error(e)
     }
   }
 
