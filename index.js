@@ -145,12 +145,15 @@ bot.on('message', async msg => {
   if (msg.content.startsWith(`${prefix}tip `)) {
     const amount = args[2]
     const username = args[1]
+    let usernameId = username
     if (username.includes('@')) {
-      var usernameId = username.substring(2, username.length - 1)
+      usernameId = username.substring(2, username.length - 1)
+      usernameId = usernameId.replace('!', '')
     }
-
+    console.log(`Tipping to ${usernameId}`)
     let userAddress = await Users.findOne({ where: { discord_id: usernameId } })
     if (!userAddress) {
+      console.log('User not found. Generating new key pair')
       const key = Key.generateKeyPair()
       const privateKey = toHexString(key.getEncodedPrivateKey())
       const address = '0x' + key.toAddressHexString()
