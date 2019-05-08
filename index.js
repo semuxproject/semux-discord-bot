@@ -7,7 +7,7 @@ const rp = require('request-promise')
 const botSettings = require('./config/config-bot.json')
 const allowedCommands = require('./config/allowed-commands.json')
 const { getPrice, getPriceInSats, getCommits, getAllStats } = require('./utils.js')
-const { Users } = require('./models')
+const { Users, sequelize } = require('./models')
 
 const prefix = botSettings.prefix
 const bot = new Discord.Client({ disableEveryone: true })
@@ -122,7 +122,11 @@ bot.on('message', async msg => {
   }
 
   if (msg.content === `${prefix}topDonators`) {
-    let donatorsList = await Users.findAll({ order: [['sent', 'DESC']], where: { 'sent': { $ne: null } }, limit: 10 })
+    let donatorsList = await Users.findAll({
+      where: { 'sent': { [sequelize.Sequelize.Op.ne]: null } },
+      order: [['sent', 'DESC']],
+      limit: 10
+    })
     let string = 'Top-10 donators:\n'
     let i = 1
     for (let row of donatorsList) {
@@ -132,7 +136,11 @@ bot.on('message', async msg => {
   }
 
   if (msg.content === `${prefix}topRecipients`) {
-    let recievesList = await Users.findAll({ order: [['received', 'DESC']], where: { 'received': { $ne: null } }, limit: 10 })
+    let recievesList = await Users.findAll({
+      where: { 'received': { [sequelize.Sequelize.Op.ne]: null } },
+      order: [['received', 'DESC']],
+      limit: 10
+    })
     let string = 'Top-10 recipients:\n'
     let i = 1
     for (let row of recievesList) {
