@@ -16,7 +16,7 @@
     "request": "^2.88.0",
     "request-promise": "^4.2.4",
     "semux-js": "https://github.com/semuxproject/semux-js",
-    "sequelize": "^4.42.0",
+    "sequelize": "^5.8.5",
     "sqlite3": "^4.0.6"
   },
   "devDependencies": {
