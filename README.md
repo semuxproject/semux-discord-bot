@@ -1,7 +1,7 @@
 
 # Discord-semux-tip-bot
 
-Tip bot for Semux discord channel: https://discord.gg/qQVckKZ 
+Tip bot for Semux discord channel: https://discord.gg/qQVckKZ
 
 **Features:**
 * deposit SEM to a personal address;
@@ -17,7 +17,7 @@ Try `/help` for more details.
 
 ## How to run
 ### Change configs
-* Change config-bot.json file. 
+* Change config-bot.json file.
 * Add your semux username and password for api.
 * Add bot token (generate it here - <https://discordapp.com/developers/applications/me>)
 * Add or change prefix, you can use "!","/","$" or any another string.
@@ -26,6 +26,3 @@ Try `/help` for more details.
 * `npm install`
 * `sequelize db:migrate`
 * `node index.js`
-
-## Maintainer
-[@speedrunner911](https://github.com/speedrunner911)

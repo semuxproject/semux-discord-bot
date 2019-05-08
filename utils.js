@@ -19,7 +19,6 @@ function getCommits () {
 }
 
 function getAllStats () {
-  console.log(data)
   return data
 }
 

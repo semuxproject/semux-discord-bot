@@ -4,6 +4,7 @@
   "/tip": "true",
   "/withdraw": "true",
   "/getAddress": "true",
+  "/address": "true",
   "/topDonators": "true",
   "/topRecipients": "true",
   "/stats": "true"

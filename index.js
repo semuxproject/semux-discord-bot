@@ -189,7 +189,7 @@ bot.on('message', async msg => {
   }
 
   // get donate address
-  if (msg.content.startsWith(`${prefix}getAddress`)) {
+  if (msg.content.startsWith(`${prefix}getAddress`) || msg.content.startsWith(`${prefix}address`)) {
     const user = await Users.findOne({ where: { discord_id: authorId } })
     if (!user) {
       const key = Key.generateKeyPair()
