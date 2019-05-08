@@ -6,7 +6,7 @@ const Long = require('long')
 const rp = require('request-promise')
 const botSettings = require('./config/config-bot.json')
 const allowedCommands = require('./config/allowed-commands.json')
-const getPrice = require('./getPrice.js')
+const { getPrice, getPriceInSats, getCommits, getAllStats } = require('./utils.js')
 const { Users } = require('./models')
 
 const prefix = botSettings.prefix
@@ -182,7 +182,7 @@ bot.on('message', async msg => {
     await changeStats(authorId, usernameId, amount)
     try {
       await reciever.send(`You've received tips. TX: <https://semux.info/explorer/transaction/${trySend.hash}> \nSend me: \`/balance\` or \`/help\` to find more details`)
-    } catch(e) {
+    } catch (e) {
       console.error(e)
     }
     await msg.reply(`Tip sent. TX: <https://semux.info/explorer/transaction/${trySend.hash}>`)
@@ -257,16 +257,10 @@ bot.on('message', async msg => {
       const totalBal = parseBal(userBal.result.available) + parseBal(userBal.result.locked)
       let usdBalance = price * totalBal
       usdBalance = numberFormat(usdBalance)
-      if (totalBal > 50000) {
-        msg.channel.send(`Your balance is: **${availabeBal}** SEM (*${usdBalance} USD*), congrats, you are the whale.`)
-      } else if (totalBal > 1000 && totalBal < 3000) {
-        msg.channel.send(`Your balance is: **${availabeBal}** SEM (*${usdBalance} USD*), congrats, you are the dolphin.`)
-      } else if (totalBal >= 3000 && totalBal < 10000) {
-        msg.channel.send(`Your balance is: **${availabeBal}** SEM (*${usdBalance} USD*), congrats, you are the shark.`)
-      } else if (totalBal === 0) {
+      if (totalBal === 0) {
         msg.channel.send(`Your wallet is empty: **${availabeBal}** SEM`)
       } else {
-        msg.channel.send(`Your balance is: **${availabeBal}** SEM (*${usdBalance} USD*),  you need more SEM to become a whale.`)
+        msg.channel.send(`Your balance is: **${availabeBal}** SEM (*${usdBalance} USD*)`)
       }
     } else {
       return msg.channel.send('Semux api issues')
@@ -278,10 +272,22 @@ bot.on('message', async msg => {
     try {
       var { result } = JSON.parse(await rp(API + 'info'))
     } catch (e) {
-      return msg.channel.send('Lost semux connection')
+      return msg.channel.send('Lost connection with API server')
     }
     if (result) {
-      return msg.channel.send(`Semux price: **${price} USD**\nSemux Last Block: **${result.latestBlockNumber}**\nPending Txs: **${result.pendingTransactions}**\nPeers: **${result.activePeers}**`)
+      let stats = getAllStats()
+      return msg.channel.send(
+        `Semux Last Block: **${numberToString(result.latestBlockNumber)}**\n` +
+        `Pending Txs: **${result.pendingTransactions}**\n` +
+        `SEM price: **$${price} USD** (${getPriceInSats()} sats)\n` +
+        `Marketcap: $${numberToString(stats.marketCap)} USD\n` +
+        `Circulating supply: ${numberToString(stats.circulatingSupply)} SEM\n` +
+        `Yearly ROI of validator: **${stats.validatorRoi}%**\n` +
+        `Total transactions: **${numberToString(stats.totalTransactions)} Txs**\n` +
+        `Total addresses: **${numberToString(stats.totalAddresses)}**\n` +
+        `Blockchain size: **${stats.blockchainSize}**\n` +
+        `Commits in last 4 weeks: **${getCommits()}**\n`
+      )
     }
   }
 
@@ -301,6 +307,13 @@ bot.on('message', async msg => {
 function numberFormat (balance) {
   const balanceInt = new Intl.NumberFormat('us-US').format(balance)
   return balanceInt
+}
+
+function numberToString (number) {
+  if (!number) {
+    return ''
+  }
+  return number.toString().replace(/(\d)(?=(\d\d\d)+([^\d]|$))/g, '$1,')
 }
 
 function parseBal (balance) {
