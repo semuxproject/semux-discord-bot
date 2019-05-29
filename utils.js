@@ -59,10 +59,6 @@ async function updateNetworkStats () {
   } catch (e) {
     return console.error('Failed to update network stats')
   }
-  console.log(stats)
-  console.log(typeof stats)
-  data.priceUSD = stats.price_usd
-  data.priceBTC = stats.price_btc
   data.totalTransactions = stats.total_transactions
   data.totalAddresses = stats.total_addresses
   data.validatorRoi = stats.validator_roi
@@ -72,6 +68,36 @@ async function updateNetworkStats () {
   data.maxSupply = stats.max_supply
 }
 
+async function updateStexPrice () {
+  let stexPrice, btcUSD
+  try {
+    stexPrice = JSON.parse(await rp('https://api3.stex.com/public/ticker/575'))
+  } catch (e) {
+    return console.error('Failed to update stex price')
+  }
+  try {
+    btcUSD = await getBtcPrice()
+  } catch (e) {
+    return console.error('Failed to get btcusd price')
+  }
+  data.priceBTC = stexPrice.data.last
+  data.priceUSD = data.priceBTC * btcUSD
+}
+
+async function getBtcPrice () {
+  let btcPrice
+  try {
+    btcPrice = JSON.parse(await rp('https://www.bitstamp.net/api/v2/ticker/btcusd/'))
+  } catch (e) {
+    return console.error('Failed to update btc price')
+  }
+  return btcPrice.last
+}
+
+// update Semux USD and BTC price
+updateStexPrice()
+// update Semux price every 15 min
+setInterval(updateStexPrice, 15 * 60 * 1000)
 // update Network Stats on startup
 updateNetworkStats()
 // update Network Stats every 15 min
