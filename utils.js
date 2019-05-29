@@ -80,7 +80,7 @@ async function updateStexPrice () {
   } catch (e) {
     return console.error('Failed to get btcusd price')
   }
-  data.priceBTC = stexPrice.data.last
+  data.priceBTC = parseFloat(stexPrice.data.last)
   data.priceUSD = data.priceBTC * btcUSD
 }
 
@@ -91,13 +91,13 @@ async function getBtcPrice () {
   } catch (e) {
     return console.error('Failed to update btc price')
   }
-  return btcPrice.last
+  return parseFloat(btcPrice.last)
 }
 
 // update Semux USD and BTC price
 updateStexPrice()
-// update Semux price every 15 min
-setInterval(updateStexPrice, 15 * 60 * 1000)
+// update Semux price every 5 min
+setInterval(updateStexPrice, 5 * 60 * 1000)
 // update Network Stats on startup
 updateNetworkStats()
 // update Network Stats every 15 min
