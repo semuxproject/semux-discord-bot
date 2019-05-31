@@ -121,7 +121,7 @@ bot.on('message', async msg => {
     console.log(`[${new Date()}] ${msg.author.username}#${msg.author.discriminator}: ${msg.content}`)
   }
 
-  if (msg.content === `${prefix}topDonators`) {
+  if (msg.content.toLowerCase() === `${prefix}topdonators`) {
     let donatorsList = await Users.findAll({
       where: { 'sent': { [sequelize.Sequelize.Op.ne]: null } },
       order: [['sent', 'DESC']],
@@ -135,7 +135,7 @@ bot.on('message', async msg => {
     return msg.channel.send(string)
   }
 
-  if (msg.content === `${prefix}topRecipients`) {
+  if (msg.content.toLowerCase() === `${prefix}toprecipients`) {
     let recievesList = await Users.findAll({
       where: { 'received': { [sequelize.Sequelize.Op.ne]: null } },
       order: [['received', 'DESC']],
@@ -197,7 +197,7 @@ bot.on('message', async msg => {
   }
 
   // get donate address
-  if (msg.content.startsWith(`${prefix}getAddress`) || msg.content.startsWith(`${prefix}address`)) {
+  if (msg.content.toLowerCase().startsWith(`${prefix}getaddress`) || msg.content.toLowerCase().startsWith(`${prefix}address`)) {
     const user = await Users.findOne({ where: { discord_id: authorId } })
     if (!user) {
       const key = Key.generateKeyPair()
