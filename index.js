@@ -39,7 +39,12 @@ async function sendToApi (tx) {
   }
 }
 
-async function sendCoins (authorId, toAddress, value, msg) {
+async function sendCoins (authorId, toAddress, value, msg, comment) {
+  let hexString = '0x746970' // default "tip"
+  if (comment) {
+    let bytesArray = Buffer.from(comment)
+    hexString = '0x' + toHexString(bytesArray)
+  }
   if (!toAddress || !value) {
     return {
       error: true,
@@ -84,7 +89,7 @@ async function sendCoins (authorId, toAddress, value, msg) {
       Long.fromNumber(FEE), // fee
       Long.fromNumber(nonce), // nonce
       Long.fromNumber(new Date().getTime()), // timestamp
-      '0x746970' // data
+      hexBytes(hexString) // data
     ).sign(privateKey)
   } catch (e) {
     console.log(e)
@@ -151,8 +156,17 @@ bot.on('message', async msg => {
 
   // tip to username
   if (msg.content.startsWith(`${prefix}tip `)) {
+    let comment = ''
     const amount = args[2]
     const username = args[1]
+    if (args[3] && args[3].includes("'")) {
+      try {
+        comment = msg.content.trim().match(/'([^']+)'/)[1]
+      } catch (e) {
+        return msg.reply('Close quotes please')
+      }
+    }
+
     let usernameId = username
     if (username.includes('@')) {
       usernameId = username.substring(2, username.length - 1)
@@ -182,7 +196,7 @@ bot.on('message', async msg => {
     let reciever = bot.users.find(user => user.id === usernameId)
     if (!reciever) return msg.reply('Wrong username, try another one')
     try {
-      var trySend = await sendCoins(authorId, userAddress, amount, msg)
+      var trySend = await sendCoins(authorId, userAddress, amount, msg, comment)
     } catch (e) {
       // console.log(e)
     }
@@ -302,7 +316,7 @@ bot.on('message', async msg => {
   if (msg.content === `${prefix}help`) {
     msg.channel.send(`SemuxBot commands:\n` +
       `**${prefix}balance** - show your balance.\n` +
-      `**${prefix}tip** *<@username>* *<amount>* - send SEM to a Discord user.\n` +
+      `**${prefix}tip** *<@username>* *<amount>* *<'comment'>*- send SEM to a Discord user.\n` +
       `**${prefix}withdraw** *<address>* *<amount>* - withdraw SEM to your personal address.\n` +
       `**${prefix}getAddress** - get your personal deposit/tips address.\n` +
       `**${prefix}topDonators** - show the most active donators.\n` +
