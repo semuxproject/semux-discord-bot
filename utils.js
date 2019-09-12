@@ -47,7 +47,9 @@ async function updateGithubStats () {
       return console.error('Failed to update Github stats')
     }
     /* sum of last 4 weeks out of 52 */
-    totalCommits += commits.all.slice(48, 52).reduce((sum, currentVal) => sum + currentVal)
+    if (commits.all.slice(48, 52).length) {
+      totalCommits += commits.all.slice(48, 52).reduce((sum, currentVal) => sum + currentVal)
+    }
   }
   data.commits = totalCommits
 }
