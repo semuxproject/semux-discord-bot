@@ -7,6 +7,7 @@ const rp = require('request-promise')
 const botSettings = require('./config/config-bot.json')
 const allowedCommands = require('./config/allowed-commands.json')
 const { getPrice, getPriceInSats, getCommits, getAllStats } = require('./utils.js')
+const { scanNewBlock } = require('./alerts.js')
 const { Users, sequelize } = require('./models')
 
 const prefix = botSettings.prefix
@@ -325,6 +326,21 @@ bot.on('message', async msg => {
     )
   }
 })
+
+setInterval(async function () {
+  result = await scanNewBlock()
+  if (result.error) {
+    return
+  }
+  const channel = bot.channels.find(c => c.name === 'trading')
+  for (let tx of result.transfers) {
+    if (tx.type === 'deposited') {
+      channel.send(`**[whale alert]** ${tx.value} SEM ${tx.type} to ${tx.exchange} :inbox_tray:`)
+    } else {
+      channel.send(`**[whale alert]** ${tx.value} SEM ${tx.type} from ${tx.exchange} :outbox_tray:`)
+    }
+  }
+}, 5 * 1000)
 
 function numberFormat (balance) {
   const balanceInt = new Intl.NumberFormat('us-US').format(balance)
