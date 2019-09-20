@@ -176,14 +176,15 @@ bot.on('message', async msg => {
     console.log(`Tipping to ${usernameId}`)
     let userAddress = await Users.findOne({ where: { discord_id: usernameId } })
     if (!userAddress) {
-      console.log('User not found. Generating new key pair')
+      const newUserName = bot.users.find(user => user.id === usernameId)
+      if (!newUserName) {
+        console.log('Cannot find this user on the server. Aborting.')
+        return msg.reply('Cannot find this user on the server.')
+      }
+      console.log('Recipient doesn\'t have public address yet. Generating new key pair.')
       const key = Key.generateKeyPair()
       const privateKey = toHexString(key.getEncodedPrivateKey())
       const address = '0x' + key.toAddressHexString()
-      const newUserName = bot.users.find(user => user.id === usernameId)
-      if (!newUserName) {
-        return msg.reply('Cannt find this user on the server.')
-      }
       var newRegister = await Users.create({
         username: newUserName.username,
         discord_id: usernameId,
@@ -195,7 +196,7 @@ bot.on('message', async msg => {
       userAddress = userAddress.address
     }
     let reciever = bot.users.find(user => user.id === usernameId)
-    if (!reciever) return msg.reply('Wrong username, try another one')
+    if (!reciever) return msg.reply('Cannot find this user on the server.')
     try {
       var trySend = await sendCoins(authorId, userAddress, amount, msg, comment)
     } catch (e) {
