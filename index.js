@@ -1,4 +1,4 @@
-'use strcit'
+'use strict'
 
 const Discord = require('discord.js')
 const { Network, TransactionType, Transaction, Key } = require('semux-js')
