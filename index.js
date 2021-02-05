@@ -1,14 +1,16 @@
-'use strict'
-
 const Discord = require('discord.js')
 const { Network, TransactionType, Transaction, Key } = require('semux-js')
 const Long = require('long')
 const rp = require('request-promise')
 const botSettings = require('./config/config-bot.json')
 const allowedCommands = require('./config/allowed-commands.json')
-const { getPrice, getPriceInSats, getCommits, getAllStats } = require('./utils.js')
+const {  parseBal } = require('./utils.js')
 const { scanNewBlock } = require('./alerts.js')
 const { Users, sequelize } = require('./models')
+
+const getTop = require('./actions/getTop')
+const getStats = require('./actions/getStats')
+const getBalance = require('./actions/getBalance')
 
 const prefix = botSettings.prefix
 const bot = new Discord.Client({ disableEveryone: true })
@@ -39,7 +41,7 @@ async function sendToApi (tx) {
     return result
   }
 }
-
+// TO DO, move to separate file
 async function sendCoins (authorId, toAddress, value, msg, comment) {
   let hexString = '0x746970' // default "tip"
   if (comment) {
@@ -127,32 +129,39 @@ bot.on('message', async msg => {
     console.log(`[${new Date()}] ${msg.author.username}#${msg.author.discriminator}: ${msg.content}`)
   }
 
-  if (msg.content.toLowerCase() === `${prefix}topdonators`) {
-    let donatorsList = await Users.findAll({
-      where: { 'sent': { [sequelize.Sequelize.Op.ne]: null } },
-      order: [['sent', 'DESC']],
-      limit: 10
-    })
-    let string = 'Top-10 donators:\n'
-    let i = 1
-    for (let row of donatorsList) {
-      string += `${i++}) ${row.username} **${row.sent.toFixed(3)}** SEM\n`
-    }
-    return msg.channel.send(string)
+  switch (msg.content.toLocaleLowerCase()) {
+    case `${prefix}topdonators`:
+      const topDonators = await getTop('sent')
+      return msg.channel.send(topDonators)
+    
+    case `${prefix}toprecipients`:
+      const topRecipients = await getTop('received')
+      return msg.channel.send(topRecipients)
+    
+
+    case `${prefix}stats`: 
+      await getStats(msg)
+      return
+
+    case `${prefix}help`:
+      return msg.channel.send(`SemuxBot commands:\n` +
+      `**${prefix}balance** - show your balance.\n` +
+      `**${prefix}tip** *<@username>* *<amount>* *<'comment'>*- send SEM to a Discord user.\n` +
+      `**${prefix}withdraw** *<address>* *<amount>* - withdraw SEM to your personal address.\n` +
+      `**${prefix}getAddress** - get your personal deposit/tips address.\n` +
+      `**${prefix}topDonators** - show the most active donators.\n` +
+      `**${prefix}topRecipients** - show the luckiest recipients.\n` +
+      `**${prefix}rain** *<amount>* - gives all online users a portion of sem.\n` +
+      `**${prefix}faucet** *<amount>* - donate sem to faucet address.\n` +
+      `**${prefix}claim** - claim 1 sem if faucet address has it. *(works once a day)*\n` +
+      `**${prefix}stats** - show current Semux network stats.`
+    )
   }
 
-  if (msg.content.toLowerCase() === `${prefix}toprecipients`) {
-    let recievesList = await Users.findAll({
-      where: { 'received': { [sequelize.Sequelize.Op.ne]: null } },
-      order: [['received', 'DESC']],
-      limit: 10
-    })
-    let string = 'Top-10 recipients:\n'
-    let i = 1
-    for (let row of recievesList) {
-      string += `${i++}) ${row.username} **${row.received.toFixed(3)}** SEM\n`
-    }
-    return msg.channel.send(string)
+  // balance
+  if (msg.content.startsWith(`${prefix}balance`) || msg.content.startsWith(`${prefix}bal`)) {
+    await getBalance(msg, authorId)
+    return 
   }
 
   // tip to username
@@ -269,63 +278,7 @@ bot.on('message', async msg => {
     }
   }
 
-  // balance
-  if (msg.content.startsWith(`${prefix}balance`) || msg.content.startsWith(`${prefix}bal`)) {
-    const price = getPrice()
-    const user = await Users.findOne({ where: { discord_id: authorId } })
-    if (!user) return msg.reply("Sorry, but you don't have account, type **/getAddress** first.")
-    const userBal = JSON.parse(await rp(API + 'account?address=' + user.address))
-    if (userBal.success) {
-      const availabeBal = numberFormat(parseBal(userBal.result.available))
-      // const lockedBal = numberFormat(parseBal(userBal.result.locked))
-      const totalBal = parseBal(userBal.result.available) + parseBal(userBal.result.locked)
-      let usdBalance = price * totalBal
-      usdBalance = numberFormat(usdBalance)
-      if (totalBal === 0) {
-        msg.channel.send(`Your wallet is empty: **${availabeBal}** SEM`)
-      } else {
-        msg.channel.send(`Your balance is: **${availabeBal}** SEM (*${usdBalance} USD*)`)
-      }
-    } else {
-      return msg.channel.send('Semux api issues')
-    }
-  }
 
-  if (msg.content === `${prefix}stats`) {
-    const price = getPrice()
-    try {
-      var { result } = JSON.parse(await rp(API + 'info'))
-    } catch (e) {
-      return msg.channel.send('Lost connection with API server')
-    }
-    if (result) {
-      let stats = getAllStats()
-      return msg.channel.send(
-        `Semux Last Block: **${numberToString(result.latestBlockNumber)}**\n` +
-        `Pending Txs: **${result.pendingTransactions}**\n` +
-        `SEM price: **$${price} USD** (${getPriceInSats()} sats)\n` +
-        `Marketcap: $${numberToString(stats.marketCap)} USD\n` +
-        `Circulating supply: ${numberToString(stats.circulatingSupply)} SEM\n` +
-        `Yearly ROI of validator: **${stats.validatorRoi}%**\n` +
-        `Total transactions: **${numberToString(stats.totalTransactions)} Txs**\n` +
-        `Total addresses: **${numberToString(stats.totalAddresses)}**\n` +
-        `Blockchain size: **${stats.blockchainSize}**\n` +
-        `Commits in last 4 weeks: **${getCommits()}**\n`
-      )
-    }
-  }
-
-  if (msg.content === `${prefix}help`) {
-    msg.channel.send(`SemuxBot commands:\n` +
-      `**${prefix}balance** - show your balance.\n` +
-      `**${prefix}tip** *<@username>* *<amount>* *<'comment'>*- send SEM to a Discord user.\n` +
-      `**${prefix}withdraw** *<address>* *<amount>* - withdraw SEM to your personal address.\n` +
-      `**${prefix}getAddress** - get your personal deposit/tips address.\n` +
-      `**${prefix}topDonators** - show the most active donators.\n` +
-      `**${prefix}topRecipients** - show the luckiest recipients.\n` +
-      `**${prefix}stats** - show current Semux network stats.`
-    )
-  }
 })
 
 setInterval(async function () {
@@ -343,21 +296,6 @@ setInterval(async function () {
   }
 }, 5 * 1000)
 
-function numberFormat (balance) {
-  const balanceInt = new Intl.NumberFormat('us-US').format(balance)
-  return balanceInt
-}
-
-function numberToString (number) {
-  if (!number) {
-    return ''
-  }
-  return number.toString().replace(/(\d)(?=(\d\d\d)+([^\d]|$))/g, '$1,')
-}
-
-function parseBal (balance) {
-  return parseFloat((parseFloat(balance) / Math.pow(10, 9)).toFixed(10))
-}
 
 function hexBytes (s) {
   return Buffer.from(s.replace('0x', ''), 'hex')
