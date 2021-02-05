@@ -1,4 +1,4 @@
-'use strcit'
+'use strict'
 
 const Discord = require('discord.js')
 const { Network, TransactionType, Transaction, Key } = require('semux-js')
@@ -7,6 +7,7 @@ const rp = require('request-promise')
 const botSettings = require('./config/config-bot.json')
 const allowedCommands = require('./config/allowed-commands.json')
 const { getPrice, getPriceInSats, getCommits, getAllStats } = require('./utils.js')
+const { scanNewBlock } = require('./alerts.js')
 const { Users, sequelize } = require('./models')
 
 const prefix = botSettings.prefix
@@ -175,14 +176,15 @@ bot.on('message', async msg => {
     console.log(`Tipping to ${usernameId}`)
     let userAddress = await Users.findOne({ where: { discord_id: usernameId } })
     if (!userAddress) {
-      console.log('User not found. Generating new key pair')
+      const newUserName = bot.users.find(user => user.id === usernameId)
+      if (!newUserName) {
+        console.log('Cannot find this user on the server. Aborting.')
+        return msg.reply('Cannot find this user on the server.')
+      }
+      console.log('Recipient doesn\'t have public address yet. Generating new key pair.')
       const key = Key.generateKeyPair()
       const privateKey = toHexString(key.getEncodedPrivateKey())
       const address = '0x' + key.toAddressHexString()
-      const newUserName = bot.users.find(user => user.id === usernameId)
-      if (!newUserName) {
-        return msg.reply('Cannt find this user on the server.')
-      }
       var newRegister = await Users.create({
         username: newUserName.username,
         discord_id: usernameId,
@@ -194,7 +196,7 @@ bot.on('message', async msg => {
       userAddress = userAddress.address
     }
     let reciever = bot.users.find(user => user.id === usernameId)
-    if (!reciever) return msg.reply('Wrong username, try another one')
+    if (!reciever) return msg.reply('Cannot find this user on the server.')
     try {
       var trySend = await sendCoins(authorId, userAddress, amount, msg, comment)
     } catch (e) {
@@ -325,6 +327,21 @@ bot.on('message', async msg => {
     )
   }
 })
+
+setInterval(async function () {
+  result = await scanNewBlock()
+  if (result.error) {
+    return
+  }
+  const channel = bot.channels.find(c => c.name === 'trading')
+  for (let tx of result.transfers) {
+    if (tx.type === 'deposited') {
+      channel.send(`**[whale alert]** ${tx.value} SEM ${tx.type} to ${tx.exchange} :inbox_tray:`)
+    } else {
+      channel.send(`**[whale alert]** ${tx.value} SEM ${tx.type} from ${tx.exchange} :outbox_tray:`)
+    }
+  }
+}, 5 * 1000)
 
 function numberFormat (balance) {
   const balanceInt = new Intl.NumberFormat('us-US').format(balance)
