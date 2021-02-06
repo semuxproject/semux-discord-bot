@@ -3,5 +3,9 @@
   "password": "semux.api.password",
   "secret": "discrod.bot.secret",
   "token": "discrod.bot.token",
+  "faucetAddress": "",
+  "faucetPR": "",
+  "claimValue": 1,
+  "claimPeriod": 24,
   "prefix": "/"
 }

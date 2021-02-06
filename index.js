@@ -10,11 +10,12 @@ const getTop = require('./actions/getTop')
 const getStats = require('./actions/getStats')
 const getBalance = require('./actions/getBalance')
 const doRain = require('./actions/doRain')
+const doFaucet = require('./actions/doFaucet')
+const doClaim = require('./actions/doClaim')
 const sendCoins = require('./sendCoins')
 
 const prefix = botSettings.prefix
 const bot = new Discord.Client({ disableEveryone: true })
-
 
 bot.on('ready', () => {
   console.log('Bot is connected.')
@@ -44,6 +45,9 @@ bot.on('message', async msg => {
   }
 
   switch (msg.content.toLocaleLowerCase()) {
+    case `${prefix}claim`:
+      await doClaim(authorId, msg)
+      return
     case `${prefix}topdonators`:
       const topDonators = await getTop('sent')
       return msg.channel.send(topDonators)
@@ -195,11 +199,15 @@ bot.on('message', async msg => {
   // rain 
   if (msg.content.startsWith(`${prefix}rain`)) {
     const amount = args[1]
-    // check balance, before rain 
     await doRain(authorId, bot, amount, msg)
     return 
-    // get all online
+  }
 
+  // faucet 
+  if (msg.content.startsWith(`${prefix}faucet`)) {
+    const amount = args[1]
+    await doFaucet(authorId, bot, amount, msg)
+    return
   }
 
 

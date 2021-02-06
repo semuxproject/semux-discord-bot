@@ -30,6 +30,10 @@ module.exports = function (sequelize, DataTypes) {
     received: {
       type: DataTypes.FLOAT,
       allowNull: true
+    },
+    lastClaim: {
+      type: DataTypes.BIGINT,
+      allowNull: true
     }
   }, {
     tableName: 'users', timestamps: false

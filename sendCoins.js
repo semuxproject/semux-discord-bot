@@ -4,6 +4,7 @@ const Long = require('long')
 
 const { toHexString, parseBal, hexBytes } = require('./utils.js')
 const { Network, TransactionType, Transaction, Key } = require('semux-js')
+const { faucetAddress, faucetPR } = require('./config/config-bot.json')
 
 const API = 'https://api.semux.online/v2.1.0/'
 const FEE = 5000000
@@ -24,11 +25,19 @@ async function sendCoins (authorId, toAddress, value, msg, comment) {
       reason: 'Amount of SEM and Discord Username are required.'
     }
   }
-  const from = await Users.findOne({ where: { discord_id: authorId } })
-  if (!from) {
-    return {
-      error: true,
-      reason: "You don't have account yet, type /getAddress first."
+  let from = ""
+  if (authorId) {
+    from = await Users.findOne({ where: { discord_id: authorId } })
+    if (!from) {
+      return {
+        error: true,
+        reason: "You don't have account yet, type /getAddress first."
+      }
+    }
+  } else {
+    from = {
+      address: faucetAddress,
+      private_key: faucetPR,
     }
   }
   var isFrom = await getAddress(from.address)
@@ -37,6 +46,8 @@ async function sendCoins (authorId, toAddress, value, msg, comment) {
   } catch (e) {
     return { error: true, reason: 'Wrong recipient, try another one.' }
   }
+
+
   if (value.includes(',')) value = value.replace(/,/g, '.')
   let amount = parseFloat(value)
   if (!amount) return { error: true, reason: 'Amount is not correct.' }
