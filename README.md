@@ -20,6 +20,8 @@ Try `/help` for more details.
 * Change config-bot.json file.
 * Add your semux username and password for api.
 * Add bot token (generate it here - <https://discordapp.com/developers/applications/me>)
+* Add address and private key of faucet pool
+* Add or change claim period
 * Add or change prefix, you can use "!","/","$" or any another string.
 ### Run bot
 * `cd semux-tip-bot`
