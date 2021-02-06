@@ -1,110 +1,24 @@
 const Discord = require('discord.js')
-const { Network, TransactionType, Transaction, Key } = require('semux-js')
-const Long = require('long')
-const rp = require('request-promise')
+const { Key } = require('semux-js')
 const botSettings = require('./config/config-bot.json')
 const allowedCommands = require('./config/allowed-commands.json')
-const {  parseBal } = require('./utils.js')
+const { toHexString } = require('./utils.js')
 const { scanNewBlock } = require('./alerts.js')
-const { Users, sequelize } = require('./models')
+const { Users } = require('./models')
 
 const getTop = require('./actions/getTop')
 const getStats = require('./actions/getStats')
 const getBalance = require('./actions/getBalance')
+const doRain = require('./actions/doRain')
+const sendCoins = require('./sendCoins')
 
 const prefix = botSettings.prefix
 const bot = new Discord.Client({ disableEveryone: true })
 
-const API = 'https://api.semux.online/v2.1.0/'
-const FEE = 5000000
 
 bot.on('ready', () => {
   console.log('Bot is connected.')
 })
-
-async function getAddress (address) {
-  return JSON.parse(await rp(API + 'account?address=' + address))
-}
-
-async function sendToApi (tx) {
-  const serialize = Buffer.from(tx.toBytes().buffer).toString('hex')
-  try {
-    var { result } = await rp({
-      method: 'POST',
-      uri: `${API}transaction/raw?raw=${serialize}&validateNonce=true`,
-      json: true
-    })
-  } catch (e) {
-    console.log(e)
-  }
-  if (result) {
-    return result
-  }
-}
-// TO DO, move to separate file
-async function sendCoins (authorId, toAddress, value, msg, comment) {
-  let hexString = '0x746970' // default "tip"
-  if (comment) {
-    let bytesArray = Buffer.from(comment)
-    hexString = '0x' + toHexString(bytesArray)
-  }
-  if (!toAddress || !value) {
-    return {
-      error: true,
-      reason: 'Amount of SEM and Discord Username are required.'
-    }
-  }
-  const from = await Users.findOne({ where: { discord_id: authorId } })
-  if (!from) {
-    return {
-      error: true,
-      reason: "You don't have account yet, type /getAddress first."
-    }
-  }
-  var isFrom = await getAddress(from.address)
-  try {
-    await getAddress(toAddress)
-  } catch (e) {
-    return { error: true, reason: 'Wrong recipient, try another one.' }
-  }
-  if (value.includes(',')) value = value.replace(/,/g, '.')
-  let amount = parseFloat(value)
-  if (!amount) return { error: true, reason: 'Amount is not correct.' }
-  amount = amount * Math.pow(10, 9)
-  if (amount < 0.000000001) return { error: true, reason: 'Wrong amount, try another one.' }
-  // check reciever balance before transfer
-  const fromAddressBal = await getAddress(from.address)
-  let nonce = parseInt(isFrom.result.nonce, 10) + parseInt(isFrom.result.pendingTransactionCount, 10)
-  const available = parseFloat(fromAddressBal.result.available)
-  if (available === amount) {
-    amount = amount - FEE
-  }
-  if (available < (amount + FEE)) {
-    return { error: true, reason: `Insufficient balance, you have **${parseBal(available)} SEM**` }
-  }
-  const privateKey = Key.importEncodedPrivateKey(hexBytes(from.private_key))
-  try {
-    var tx = new Transaction(
-      Network.MAINNET,
-      TransactionType.TRANSFER,
-      hexBytes(toAddress), // to
-      Long.fromNumber(amount), // value
-      Long.fromNumber(FEE), // fee
-      Long.fromNumber(nonce), // nonce
-      Long.fromNumber(new Date().getTime()), // timestamp
-      hexBytes(hexString) // data
-    ).sign(privateKey)
-  } catch (e) {
-    console.log(e)
-  }
-  let hash = await sendToApi(tx)
-
-  if (!hash) {
-    return { error: true, reason: 'Error while tried to create transaction.' }
-  } else {
-    return { error: false, hash }
-  }
-}
 
 async function changeStats (senderId, recieverId, value) {
   if (value.includes(',')) value = value.replace(/,/g, '.')
@@ -278,6 +192,16 @@ bot.on('message', async msg => {
     }
   }
 
+  // rain 
+  if (msg.content.startsWith(`${prefix}rain`)) {
+    const amount = args[1]
+    // check balance, before rain 
+    await doRain(authorId, bot, amount, msg)
+    return 
+    // get all online
+
+  }
+
 
 })
 
@@ -295,16 +219,5 @@ setInterval(async function () {
     }
   }
 }, 5 * 1000)
-
-
-function hexBytes (s) {
-  return Buffer.from(s.replace('0x', ''), 'hex')
-}
-
-function toHexString (byteArray) {
-  return Array.from(byteArray, function (byte) {
-    return ('0' + (byte & 0xFF).toString(16)).slice(-2)
-  }).join('')
-}
 
 bot.login(botSettings.token)

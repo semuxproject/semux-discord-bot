@@ -112,6 +112,16 @@ function numberToString (number) {
   return number.toString().replace(/(\d)(?=(\d\d\d)+([^\d]|$))/g, '$1,')
 }
 
+function toHexString (byteArray) {
+  return Array.from(byteArray, function (byte) {
+    return ('0' + (byte & 0xFF).toString(16)).slice(-2)
+  }).join('')
+}
+
+function hexBytes (s) {
+  return Buffer.from(s.replace('0x', ''), 'hex')
+}
+
 // update Semux USD and BTC price
 // updateStexPrice()
 // update Semux price every 5 min
@@ -135,4 +145,6 @@ module.exports = {
   numberFormat,
   parseBal,
   numberToString,
+  toHexString,
+  hexBytes,
 }
