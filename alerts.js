@@ -3,10 +3,10 @@ const rp = require('request-promise')
 const EXCHANGES = require('./config/exchanges.json')
 const API = 'https://api.semux.online/v2.3.0/'
 const TX_VALUE = 2500 // SEM
-let BEST_HEIGHT = 0;
+let BEST_HEIGHT = 0
 
 async function scanNewBlock () {
-  let lastHeight;
+  let lastHeight
   try {
     lastHeight = JSON.parse(await rp(`${API}latest-block-number`))
   } catch (e) {
@@ -18,7 +18,7 @@ async function scanNewBlock () {
     return {error: true}
   }
   BEST_HEIGHT = lastHeight
-  let block;
+  let block
   try {
     block = JSON.parse(await rp(`${API}block-by-number?number=${BEST_HEIGHT}`))
   } catch (e) {
@@ -28,11 +28,11 @@ async function scanNewBlock () {
   if (!block.result || !block.result.transactions) {
     return {error: true}
   }
-  let transfers = [];
+  let transfers = []
   for (let tx of block.result.transactions) {
     let value = parseInt(tx.value, 10) / 1e9
     if (tx.type !== 'TRANSFER' || value < TX_VALUE) {
-      continue;
+      continue
     }
     if (EXCHANGES[tx.from]) {
       transfers.push({exchange: EXCHANGES[tx.from], value: value.toFixed(2), type: 'withdrawn'})

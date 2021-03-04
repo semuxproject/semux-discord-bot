@@ -96,23 +96,55 @@ async function getBtcPrice () {
   return parseFloat(btcPrice.last)
 }
 
+function numberFormat (balance) {
+  const balanceInt = new Intl.NumberFormat('us-US').format(balance)
+  return balanceInt
+}
+
+function parseBal (balance) {
+  return parseFloat((parseFloat(balance) / Math.pow(10, 9)).toFixed(10))
+}
+
+function numberToString (number) {
+  if (!number) {
+    return ''
+  }
+  return number.toString().replace(/(\d)(?=(\d\d\d)+([^\d]|$))/g, '$1,')
+}
+
+function toHexString (byteArray) {
+  return Array.from(byteArray, function (byte) {
+    return ('0' + (byte & 0xFF).toString(16)).slice(-2)
+  }).join('')
+}
+
+function hexBytes (s) {
+  return Buffer.from(s.replace('0x', ''), 'hex')
+}
+
 // update Semux USD and BTC price
-updateStexPrice()
+// updateStexPrice()
 // update Semux price every 5 min
-setInterval(updateStexPrice, 5 * 60 * 1000)
+// setInterval(updateStexPrice, 5 * 60 * 1000)
 // update Network Stats on startup
-updateNetworkStats()
+// updateNetworkStats()
 // update Network Stats every 15 min
-setInterval(updateNetworkStats, 15 * 60 * 1000)
+// setInterval(updateNetworkStats, 15 * 60 * 1000)
 
 // update Github stats on startup
-updateGithubStats()
+// updateGithubStats()
 // update Github stats every 3 hours
-setInterval(updateGithubStats, 3 * 60 * 60 * 1000)
+// setInterval(updateGithubStats, 3 * 60 * 60 * 1000)
 
 module.exports = {
   getPrice,
   getPriceInSats,
   getCommits,
-  getAllStats
+  getAllStats,
+  
+  numberFormat,
+  parseBal,
+  numberToString,
+  toHexString,
+  hexBytes,
 }
