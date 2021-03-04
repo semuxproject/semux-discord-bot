@@ -7,5 +7,8 @@
   "/address": "true",
   "/topDonators": "true",
   "/topRecipients": "true",
-  "/stats": "true"
+  "/stats": "true",
+  "/claim": "true",
+  "/faucet": "true",
+  "/rain": "true"
 }
