@@ -21,7 +21,7 @@ const doFaucet = async (authorId, bot, value, msg) => {
     return;
   }
 
-  value = value.replace(/,/g, ".");
+  value = value ? value.replace(/,/g, ".") : "";
   let amount = parseFloat(value);
   if (isNaN(amount)) {
     return msg.channel.send("Wrong amount, must be a number.");

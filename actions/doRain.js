@@ -41,7 +41,7 @@ async function doRain(authorId, bot, value, msg) {
     onlineUsers.includes(String(user.discord_id).slice(0, -3))
   );
 
-  value = value.replace(/,/g, ".");
+  value = value ? value.replace(/,/g, ".") : "";
   let amount = parseFloat(value);
   if (isNaN(amount)) {
     return msg.channel.send("Wrong amount, must be a number.");
