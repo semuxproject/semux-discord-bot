@@ -12,7 +12,7 @@ function getOnline(bot) {
   users.keyArray().forEach((val) => {
     const userId = users.get(val).id;
     const status = users.get(val).presence.status;
-    if (status == "online") {
+    if (status === "online" || status === "idle") {
       onlineList.push(userId.slice(0, -3));
     }
   });
@@ -45,6 +45,11 @@ async function doRain(authorId, bot, value, msg) {
   let amount = parseFloat(value);
   if (isNaN(amount)) {
     return msg.channel.send("Wrong amount, must be a number.");
+  }
+
+  if (!validUsers || validUsers.length < 1) {
+    msg.channel.send(`No online users in the server.`);
+    return;
   }
 
   if (availabeBal < amount + validUsers.length * 0.005) {
