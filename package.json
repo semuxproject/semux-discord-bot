@@ -29,9 +29,9 @@
     }
   },
   "lint-staged": {
-    "*.{js}": [
-      "eslint src --ext .js",
-      "prettier --write"
+    "*.{js,jsx,ts,tsx}": [
+      "eslint . --ext .js",
+      "prettier . --write"
     ]
   }
 }
