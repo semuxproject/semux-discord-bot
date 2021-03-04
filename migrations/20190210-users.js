@@ -1,41 +1,41 @@
-'use strict'
+"use strict";
 
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable('users', {
+    return queryInterface.createTable("users", {
       id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
-        autoIncrement: true
+        autoIncrement: true,
       },
       discord_id: {
         type: Sequelize.INTEGER,
-        allowNull: false
+        allowNull: false,
       },
       username: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       address: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       private_key: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       sent: {
         type: Sequelize.FLOAT,
-        allowNull: true
+        allowNull: true,
       },
       received: {
         type: Sequelize.FLOAT,
-        allowNull: true
-      }
-    })
+        allowNull: true,
+      },
+    });
   },
 
-  down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('users')
-  }
-}
+  down: (queryInterface) => {
+    return queryInterface.dropTable("users");
+  },
+};
